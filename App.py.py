@@ -1,72 +1,68 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[1]:
-
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
-import pickle
+from scipy import stats
 import matplotlib.pyplot as plt
-from sklearn.ensemble import IsolationForest
+import io
 
-# App Title
-st.title("AI-Powered Insider Trading Detection")
+# Define function to fetch and process data
+def fetch_and_process_data(stock_symbol, start_date, end_date):
+    data = yf.download(stock_symbol, start=start_date, end=end_date)
+    data['Daily Return'] = data['Close'].pct_change()
+    data['Volume Change'] = data['Volume'].pct_change()
+    data = data.dropna()
 
-# Sidebar for user input
-st.sidebar.header("Input Stock Ticker")
+    # Calculate Z-scores
+    data['Return Z-Score'] = stats.zscore(data['Daily Return'])
+    data['Volume Z-Score'] = stats.zscore(data['Volume Change'])
 
-# User inputs
-ticker = st.sidebar.text_input("Enter Stock Ticker", value="AAPL")
-start_date = st.sidebar.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
-end_date = st.sidebar.date_input("End Date", value=pd.to_datetime("today"))
+    # Define thresholds for anomaly detection
+    return_threshold = 3
+    volume_threshold = 3
 
-# Fetching stock data
-def get_stock_data(ticker, start, end):
-    data = yf.download(ticker, start=start, end=end)
+    # Flag anomalies
+    data['Return Anomaly'] = data['Return Z-Score'].abs() > return_threshold
+    data['Volume Anomaly'] = data['Volume Z-Score'].abs() > volume_threshold
+
     return data
 
-# Display the stock data
-st.subheader(f"Stock Data for {ticker} from {start_date} to {end_date}")
-data = get_stock_data(ticker, start_date, end_date)
-st.write(data.tail())
+# Define function to plot data
+def plot_data(data, anomalies, stock_symbol):
+    # Plot closing price and highlight anomalies
+    fig, ax = plt.subplots(figsize=(14, 7))
+    ax.plot(data.index, data['Close'], label='Close Price', color='blue')
+    ax.scatter(anomalies.index, anomalies['Close'], color='red', label='Anomalies')
+    ax.set_title(f'{stock_symbol} - Closing Price with Detected Anomalies')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Price')
+    ax.legend()
+    st.pyplot(fig)
 
-# Feature engineering
-data['Returns'] = data['Adj Close'].pct_change()
-data['Moving_Avg'] = data['Adj Close'].rolling(window=20).mean()
-data['Volatility'] = data['Adj Close'].rolling(window=20).std()
-data = data.dropna()
+    # Plot volume and highlight anomalies
+    fig, ax = plt.subplots(figsize=(14, 7))
+    ax.plot(data.index, data['Volume'], label='Volume', color='blue')
+    ax.scatter(anomalies.index, anomalies['Volume'], color='red', label='Anomalies')
+    ax.set_title(f'{stock_symbol} - Trading Volume with Detected Anomalies')
+    ax.set_xlabel('Date')
+    ax.set_ylabel('Volume')
+    ax.legend()
+    st.pyplot(fig)
 
-# Load the pre-trained Isolation Forest model
-def load_model():
-    with open('isolation_forest_model.pkl', 'rb') as f:
-        model = pickle.load(f)
-    return model
+# Streamlit UI
+st.title('Stock Anomaly Detection')
+stock_symbol = st.text_input('Stock Symbol', 'AAPL')
+start_date = st.date_input('Start Date', pd.to_datetime('2023-01-01'))
+end_date = st.date_input('End Date', pd.to_datetime('2023-12-31'))
 
-model = load_model()
+if st.button('Analyze'):
+    with st.spinner('Fetching and processing data...'):
+        data = fetch_and_process_data(stock_symbol, start_date, end_date)
+        anomalies = data[(data['Return Anomaly']) | (data['Volume Anomaly'])]
 
-# Predict anomalies
-def detect_anomalies(data, model):
-    features = data[['Returns', 'Moving_Avg', 'Volatility']]
-    data['Anomaly'] = model.predict(features)
-    return data
+        st.write(f"Anomalies detected: {len(anomalies)}")
+        st.dataframe(anomalies)
 
-# Run anomaly detection
-if st.button("Run Anomaly Detection"):
-    result_data = detect_anomalies(data, model)
-    st.subheader("Anomaly Detection Results")
-    st.write(result_data.tail())
-
-    # Plot anomalies
-    st.subheader("Anomalies in Stock Price")
-    plt.figure(figsize=(10, 6))
-    plt.plot(result_data.index, result_data['Adj Close'], label="Stock Price")
-    anomalies = result_data[result_data['Anomaly'] == -1]
-    plt.scatter(anomalies.index, anomalies['Adj Close'], color='red', label="Anomalies")
-    plt.legend()
-    st.pyplot(plt)
-
+        plot_data(data, anomalies, stock_symbol)
 
 # In[ ]:
 
