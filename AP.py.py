@@ -67,6 +67,14 @@ if st.button("Run Anomaly Detection"):
     plt.scatter(anomalies.index, anomalies['Adj Close'], color='red', label="Anomalies")
     plt.legend()
     st.pyplot(plt)
+import streamlit as st
+
+try:
+    import yfinance as yf
+    st.write("yfinance imported successfully!")
+except ImportError as e:
+    st.error(f"Error importing yfinance: {e}")
+
 
 
 # In[ ]:
