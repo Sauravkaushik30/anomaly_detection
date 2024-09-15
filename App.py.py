@@ -63,3 +63,6 @@ if st.button('Analyze'):
         st.dataframe(anomalies)
 
         plot_data(data, anomalies, stock_symbol)
+import sys
+st.write(f"Python version: {sys.version}")
+
