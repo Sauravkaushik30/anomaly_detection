@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[2]:
-
-
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -47,11 +41,24 @@ contamination = st.sidebar.slider("Contamination (Anomaly Proportion)", 0.01, 0.
 
 # Train the Isolation Forest model
 def train_isolation_forest(data):
+    # Select relevant features and drop rows with missing values
+    features = data[['Returns', 'Moving_Avg', 'Volatility']].dropna()
+
+    # Train the model on the features
     model = IsolationForest(n_estimators=n_estimators, contamination=contamination, random_state=42)
-    features = data[['Returns', 'Moving_Avg', 'Volatility']].dropna()  # Drop rows with missing values
     model.fit(features)
-    data['Anomaly'] = model.predict(features)
+
+    # Predict anomalies (-1 for anomaly, 1 for normal)
+    predictions = model.predict(features)
+
+    # Create a new column 'Anomaly' in the original dataframe and set all values to 'NaN'
+    data['Anomaly'] = float('nan')
+
+    # Align predictions back to the original dataframe
+    data.loc[features.index, 'Anomaly'] = predictions
+
     return data
+
 
 # Run anomaly detection
 if st.button("Run Anomaly Detection"):
@@ -67,36 +74,6 @@ if st.button("Run Anomaly Detection"):
     plt.scatter(anomalies.index, anomalies['Adj Close'], color='red', label="Anomalies")
     plt.legend()
     st.pyplot(plt)
-import streamlit as st
-
-st.title("Testing Imports")
-
-try:
-    import yfinance as yf
-    st.write("yfinance imported successfully!")
-    st.write("yfinance version:", yf.__version__)
-except Exception as e:
-    st.error(f"Error importing yfinance: {e}")
-
-try:
-    import pandas as pd
-    st.write("pandas version:", pd.__version__)
-except Exception as e:
-    st.error(f"Error importing pandas: {e}")
-
-try:
-    import matplotlib.pyplot as plt
-    st.write("matplotlib version:", plt.__version__)
-except Exception as e:
-    st.error(f"Error importing matplotlib: {e}")
-
-try:
-    from sklearn.ensemble import IsolationForest
-    st.write("scikit-learn version:", IsolationForest.__module__)
-except Exception as e:
-    st.error(f"Error importing scikit-learn: {e}")
-
-
 
 # In[ ]:
 
