@@ -69,11 +69,32 @@ if st.button("Run Anomaly Detection"):
     st.pyplot(plt)
 import streamlit as st
 
+st.title("Testing Imports")
+
 try:
     import yfinance as yf
     st.write("yfinance imported successfully!")
-except ImportError as e:
+    st.write("yfinance version:", yf.__version__)
+except Exception as e:
     st.error(f"Error importing yfinance: {e}")
+
+try:
+    import pandas as pd
+    st.write("pandas version:", pd.__version__)
+except Exception as e:
+    st.error(f"Error importing pandas: {e}")
+
+try:
+    import matplotlib.pyplot as plt
+    st.write("matplotlib version:", plt.__version__)
+except Exception as e:
+    st.error(f"Error importing matplotlib: {e}")
+
+try:
+    from sklearn.ensemble import IsolationForest
+    st.write("scikit-learn version:", IsolationForest.__module__)
+except Exception as e:
+    st.error(f"Error importing scikit-learn: {e}")
 
 
 
